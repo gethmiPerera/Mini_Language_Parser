@@ -18,6 +18,16 @@ jobs:
       - name: Compile parser
         run: gcc -Wall -Wextra -std=c11 parser.c -o parser
 
+      - name: Test committed inputfile.txt
+        run: |
+          set +e
+          output=$(./parser inputfile.txt)
+          status=$?
+          set -e
+
+          test "$status" -ne 0
+          echo "$output" | grep -q "Semantic Error: Variable redeclared"
+
       - name: Test valid program
         run: |
           cat > valid-input.txt <<'EOF'
