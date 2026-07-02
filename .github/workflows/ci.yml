@@ -1,0 +1,61 @@
+name: C Parser CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile parser
+        run: gcc -Wall -Wextra -std=c11 parser.c -o parser
+
+      - name: Test valid program
+        run: |
+          cat > valid-input.txt <<'EOF'
+          int x = 5;
+          int y = 20;
+          int z = x + y;
+          print(z);
+          EOF
+
+          output=$(./parser valid-input.txt)
+          test "$output" = "25"
+
+      - name: Test variable redeclaration error
+        run: |
+          cat > redeclared-input.txt <<'EOF'
+          int x = 5;
+          int x = 20;
+          EOF
+
+          set +e
+          output=$(./parser redeclared-input.txt)
+          status=$?
+          set -e
+
+          test "$status" -ne 0
+          echo "$output" | grep -q "Semantic Error: Variable redeclared"
+
+      - name: Test undeclared variable error
+        run: |
+          cat > undeclared-input.txt <<'EOF'
+          int x = 5;
+          int z = x + y;
+          EOF
+
+          set +e
+          output=$(./parser undeclared-input.txt)
+          status=$?
+          set -e
+
+          test "$status" -ne 0
+          echo "$output" | grep -q "Semantic Error: Variable not declared"
